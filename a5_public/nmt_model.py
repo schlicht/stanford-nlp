@@ -84,9 +84,12 @@ class NMT(nn.Module):
         source_padded = self.vocab.src.to_input_tensor(source, device=self.device)   # Tensor: (src_len, b)
         target_padded = self.vocab.tgt.to_input_tensor(target, device=self.device)   # Tensor: (tgt_len, b)
 
-        enc_hiddens, dec_init_state = self.encode(source_padded, source_lengths)
+        source_padded_chars = self.vocab.src.to_input_tensor_char(source, device=self.device)   # Tensor: (src_len, b)
+        target_padded_chars = self.vocab.tgt.to_input_tensor_char(target, device=self.device)   # Tensor: (tgt_len, b)
+
+        enc_hiddens, dec_init_state = self.encode(source_padded_chars, source_lengths)
         enc_masks = self.generate_sent_masks(enc_hiddens, source_lengths)
-        combined_outputs = self.decode(enc_hiddens, enc_masks, dec_init_state, target_padded)
+        combined_outputs = self.decode(enc_hiddens, enc_masks, dec_init_state, target_padded_chars)
         ## End A4 code
 
         ### YOUR CODE HERE for part 1k
@@ -116,7 +119,7 @@ class NMT(nn.Module):
             max_word_len = target_padded_chars.shape[-1]
 
             target_words = target_padded[1:].contiguous().view(-1)
-            target_chars = target_padded_chars[1:].view(-1, max_word_len)
+            target_chars = target_padded_chars[1:].contiguous().view(-1, max_word_len)
             target_outputs = combined_outputs.view(-1, 256)
 
             target_chars_oov = target_chars #torch.index_select(target_chars, dim=0, index=oovIndices)
@@ -143,7 +146,7 @@ class NMT(nn.Module):
 
         ### COPY OVER YOUR CODE FROM ASSIGNMENT 4
         ### Except replace "self.model_embeddings.source" with "self.model_embeddings_source"
-        X = self.model_embeddings.source(source_padded)
+        X = self.model_embeddings_source(source_padded)
         X = nn.utils.rnn.pack_padded_sequence(X, source_lengths)
 
         enc_hiddens, (last_hidden, last_cell) = self.encoder(X)
@@ -190,7 +193,7 @@ class NMT(nn.Module):
 
         ### COPY OVER YOUR CODE FROM ASSIGNMENT 4
         ### Except replace "self.model_embeddings.target" with "self.model_embeddings_target"
-        Y = self.model_embeddings.target(target_padded)
+        Y = self.model_embeddings_target(target_padded)
         enc_hiddens_proj = self.att_projection(enc_hiddens)
         Y = torch.split(Y, 1)
         for y_t in Y:
@@ -247,7 +250,7 @@ class NMT(nn.Module):
 
         # Set e_t to -inf where enc_masks has 1
         if enc_masks is not None:
-            e_t.data.masked_fill_(enc_masks.byte(), -float('inf'))
+            e_t.data.masked_fill_(enc_masks.bool(), -float('inf'))
 
         ### COPY OVER YOUR CODE FROM ASSIGNMENT 4
         alpha_t = nn.functional.softmax(e_t)

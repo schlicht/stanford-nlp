@@ -169,7 +169,7 @@ class VocabEntry(object):
         ###     Connect `words2charindices()` and `pad_sents_char()` which you've defined in
         ###     previous parts
         wordIndices = self.words2charindices(sents)
-        wordIndicesPadded = pad_sents_char(wordIndices)
+        wordIndicesPadded = pad_sents_char(wordIndices, char_pad_token=self.char2id['<pad>'])
         sents_var = torch.tensor(wordIndicesPadded, device=device)
         return sents_var.transpose(0, 1)
         ### END YOUR CODE

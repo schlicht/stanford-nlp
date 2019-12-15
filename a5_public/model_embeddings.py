@@ -13,6 +13,9 @@ Michael Hahn <mhahn2@stanford.edu>
 import torch.nn as nn
 import torch
 
+from cnn import CNN
+from highway import Highway
+
 # Do not change these imports; your module names should be
 #   `CNN` in the file `cnn.py`
 #   `Highway` in the file `highway.py`
@@ -41,6 +44,8 @@ class ModelEmbeddings(nn.Module):
         ## End A4 code
 
         ### YOUR CODE HERE for part 1j
+
+        pad_token_idx = vocab.char2id['<pad>']
         self.embed_size = embed_size
         char_embed_size = 50
         self.char_embedding = nn.Embedding(len(vocab.char2id),
@@ -49,7 +54,6 @@ class ModelEmbeddings(nn.Module):
         self.conv = CNN(f=self.embed_size)
         self.highway = Highway(embed_size=self.embed_size)
         self.dropout = nn.Dropout(p=0.3)
-
         ### END YOUR CODE
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
@@ -67,16 +71,17 @@ class ModelEmbeddings(nn.Module):
         ## End A4 code
 
         ### YOUR CODE HERE for part 1j
-        X_word_emb_list = []
-        for X_padded in input:
-            X_emb = self.char_embedding(X_padded)
-            X_reshaped = torch.transpose(X_emb, dim0=-1, dim1=-2)
-            X_conv_out = self.conv(X_reshaped)
-            X_highway = self.highway(X_conv_out)
-            X_word_emb = self.dropout(X_highway)
-            X_word_emb_list.append(X_word_emb)
+        x_word_emb_list = []
+        # divide input into sentence_length batchs
+        for x_padded in input:
+            x_emb = self.char_embedding(x_padded)
+            x_reshaped = torch.transpose(x_emb, dim0=-1, dim1=-2)
+            x_conv_out = self.conv(x_reshaped)
+            x_highway = self.highway(x_conv_out)
+            x_word_emb = self.dropout(x_highway)
+            x_word_emb_list.append(x_word_emb)
 
-        X_word_emb = torch.stack(X_word_emb_list)
-        return X_word_emb
+        x_word_emb = torch.stack(x_word_emb_list)
+        return x_word_emb
 
         ### END YOUR CODE
